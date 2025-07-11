@@ -5,7 +5,7 @@ import torchaudio
 import os
 from torch.utils.data import Dataset, DataLoader
 import settings
-from model import VoiceCNN
+from model import VoiceMixtureModel
 
 class CommandDataset(Dataset):
     def __init__(self, data_dir, commands, transform=None, fixed_length=48):
@@ -53,13 +53,11 @@ class CommandDataset(Dataset):
         return f.view(40, self.fixed_length), self.labels[idx]
 
 def train(data_dir, commands, epochs=settings.EPOCHS, batch_size=settings.BATCH_SIZE):
-    mfcc = torchaudio.transforms.MFCC(
-        sample_rate=16000, n_mfcc=40,
-        melkwargs={'n_fft': 400, 'hop_length': 160})
+    mfcc = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40, melkwargs={'n_fft': 400, 'hop_length': 160})
     ds = CommandDataset(data_dir, commands, transform=mfcc, fixed_length=48)
     torch.save({'mean': ds.mfcc_mean, 'std': ds.mfcc_std}, 'stats.pth')
     loader = DataLoader(ds, batch_size, shuffle=True)
-    model = VoiceCNN(len(commands))
+    model = VoiceMixtureModel(len(commands))
     criterion = nn.CrossEntropyLoss()
     opt = optim.Adam(model.parameters(), lr=settings.LEARNING_RATE)
     for ep in range(epochs):
@@ -81,5 +79,5 @@ def train(data_dir, commands, epochs=settings.EPOCHS, batch_size=settings.BATCH_
     torch.save(model.state_dict(), 'voice_command.pth')
 
 if __name__ == '__main__':
-    train('data', settings.COMMANDS)
+    train(settings.DATA_DIR, settings.COMMANDS)
 
